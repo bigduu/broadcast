@@ -21,5 +21,5 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
     - name: Rust Release binary
-      uses: rust-build/rust-build.action@v1.4.2
+      uses: gmiam/rust-musl-action@v1.1.2
       
