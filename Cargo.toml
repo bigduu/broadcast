@@ -1,0 +1,35 @@
+[package]
+name = "broadcast"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# build to arm64 windows
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+ar = "x86_64-w64-mingw32-gcc-ar"
+
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"
+
+
+[dependencies]
+tokio = { version = "*", features = ["full"] }
+anyhow = "*"
+crossbeam = "*"
+futures = { version = "*" }
+
+# logger
+tracing = "*"
+tracing-subscriber = "*"
+
+# serde
+serde = { version = "*", features = ["derive"] }
+serde_json = { version = "*" }
+serde_yaml = { version = "*" }
+
+#network 
+local-ip-address = "*"
+
+#tools
+bytes = "*"
