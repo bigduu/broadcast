@@ -25,6 +25,15 @@ impl Node {
         }
     }
 
+    pub fn new_self_node(name: String, port: u16) -> Self {
+        Node {
+            name,
+            ipaddress: local_ip().unwrap().to_string(),
+            port,
+            hit_timestamp: 0,
+        }
+    }
+
     pub fn update_hit_timestamp(&mut self) {
         self.hit_timestamp = SystemTime::now()
             .duration_since(time::UNIX_EPOCH)

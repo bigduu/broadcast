@@ -5,7 +5,7 @@ use std::{
 };
 
 use tokio::{net::UdpSocket, sync::Mutex, time::sleep};
-use tracing::info;
+use tracing::{error, info};
 
 use super::frame::UdpFrame;
 use super::node::Node;
@@ -13,6 +13,7 @@ use super::node::Node;
 #[derive(Debug, Clone)]
 pub struct Server {
     pub name: String,
+    pub port: u16,
     pub node: Node,
     pub node_list: Arc<Mutex<Vec<Node>>>,
     pub socket: Arc<UdpSocket>,
@@ -21,10 +22,13 @@ pub struct Server {
 
 impl Server {
     pub async fn new(name: String, port: u16) -> Self {
-        let node = Node::new(name.to_string(), port, 0);
-        let socket = UdpSocket::bind("0.0.0.0:8080")
+        let node = Node::new_self_node(name.to_string(), port);
+        let socket = UdpSocket::bind(&format!("0.0.0.0:{port}"))
             .await
-            .expect("Failed to bind socket to port 8080");
+            .unwrap_or_else(|e| {
+                error!("Failed to bind socket to port {} with error {}", port, e);
+                panic!("Failed to bind socket to port {port}")
+            });
         socket
             .set_multicast_loop_v4(true)
             .expect("Failed to set broadcast");
@@ -34,6 +38,7 @@ impl Server {
         info!("Joined multicast group 224.0.0.1 successfully");
         Server {
             name,
+            port,
             node,
             node_list: Arc::new(Mutex::new(vec![])),
             socket: Arc::new(socket),
@@ -104,7 +109,7 @@ impl Server {
             let data = frame.to_bytes();
             self.clone()
                 .socket
-                .send_to(data.as_slice(), "224.0.0.1:8080")
+                .send_to(data.as_slice(), &format!("224.0.0.1:{}", self.port.clone()))
                 .await
                 .expect("Failed to send broadcast");
             sleep(Duration::from_secs(5)).await;
