@@ -72,7 +72,11 @@ impl Server {
                 "In server node list: {:#?}",
                 node_list
                     .iter()
-                    .map(|n| n.clone().name)
+                    .map(|n| format!(
+                        "Node: {}, timestamp: {}",
+                        n.clone().name,
+                        n.clone().hit_timestamp
+                    ))
                     .collect::<Vec<String>>()
             );
         }

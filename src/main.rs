@@ -8,8 +8,11 @@ mod network;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    Server::new(local_ip().unwrap().to_string(), 8080)
-        .await
-        .scan_node()
-        .await;
+    let _ = tokio::spawn(async move {
+        Server::new(local_ip().unwrap().to_string(), 8080)
+            .await
+            .scan_node()
+            .await;
+    })
+    .await;
 }

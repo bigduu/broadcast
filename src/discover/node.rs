@@ -3,12 +3,14 @@ use std::{
     u128,
 };
 
+use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Node {
     pub name: String,
+    pub ipaddress: String,
     pub port: u16,
     pub hit_timestamp: u128,
 }
@@ -17,6 +19,7 @@ impl Node {
     pub fn new(name: String, port: u16, hit_timestamp: u128) -> Self {
         Node {
             name,
+            ipaddress: local_ip().unwrap().to_string(),
             port,
             hit_timestamp,
         }
