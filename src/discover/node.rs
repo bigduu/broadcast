@@ -6,22 +6,17 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
 
-use crate::network::{list_ipv4_addresses, NetworkInterface};
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Node {
     pub name: String,
-    pub ip_address: Vec<NetworkInterface>,
     pub port: u16,
     pub hit_timestamp: u128,
 }
 
 impl Node {
     pub fn new(name: String, port: u16, hit_timestamp: u128) -> Self {
-        let ip_address = list_ipv4_addresses();
         Node {
             name,
-            ip_address,
             port,
             hit_timestamp,
         }

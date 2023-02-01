@@ -25,7 +25,13 @@ impl Server {
         let socket = UdpSocket::bind("0.0.0.0:8080")
             .await
             .expect("Failed to bind socket to port 8080");
-        socket.set_broadcast(true).expect("Failed to set broadcast");
+        socket
+            .set_multicast_loop_v4(true)
+            .expect("Failed to set broadcast");
+        socket
+            .join_multicast_v4("224.0.0.1".parse().unwrap(), "0.0.0.0".parse().unwrap())
+            .expect("Failed to join multicast group");
+        info!("Joined multicast group 224.0.0.1 successfully");
         Server {
             name,
             node,
@@ -74,7 +80,7 @@ impl Server {
 
     async fn listen_notify(&self) {
         loop {
-            let mut buf = vec![0u8; 2048];
+            let mut buf = vec![0u8; 1400];
             let (len, _addr) = self
                 .clone()
                 .socket
@@ -94,7 +100,7 @@ impl Server {
             let data = frame.to_bytes();
             self.clone()
                 .socket
-                .send_to(data.as_slice(), "255.255.255.255:8080")
+                .send_to(data.as_slice(), "224.0.0.1:8080")
                 .await
                 .expect("Failed to send broadcast");
             sleep(Duration::from_secs(5)).await;
@@ -135,14 +141,6 @@ impl Server {
         node_list.iter().find(|n| n.name == name).cloned()
     }
 
-    pub async fn get_node_by_ip(&self, ip: String) -> Option<Node> {
-        let node_list = self.node_list.lock().await;
-        node_list
-            .iter()
-            .find(|n| n.ip_address.iter().any(|i| i.ip.to_string() == ip))
-            .cloned()
-    }
-
     pub async fn get_node_by_port(&self, port: u16) -> Option<Node> {
         let node_list = self.node_list.lock().await;
         node_list.iter().find(|n| n.port == port).cloned()
@@ -153,14 +151,6 @@ impl Server {
         node_list
             .iter()
             .find(|n| n.name == name && n.port == port)
-            .cloned()
-    }
-
-    pub async fn get_node_by_name_and_ip(&self, name: String, ip: String) -> Option<Node> {
-        let node_list = self.node_list.lock().await;
-        node_list
-            .iter()
-            .find(|n| n.name == name && n.ip_address.iter().any(|i| i.ip.to_string() == ip))
             .cloned()
     }
 }

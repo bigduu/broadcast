@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::net::IpAddr;
 
 use local_ip_address::list_afinet_netifas;
