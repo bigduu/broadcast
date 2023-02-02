@@ -11,7 +11,7 @@ use super::frame::UdpFrame;
 use super::node::Node;
 
 #[derive(Debug, Clone)]
-pub struct Server {
+pub struct BroadcastServer {
     pub name: String,
     pub port: u16,
     pub node: Node,
@@ -20,7 +20,7 @@ pub struct Server {
     pub timeout: Duration,
 }
 
-impl Server {
+impl BroadcastServer {
     pub async fn new(name: String, port: u16) -> Self {
         let node = Node::new_self_node(name.to_string(), port);
         let socket = UdpSocket::bind(&format!("0.0.0.0:{port}"))
@@ -32,11 +32,13 @@ impl Server {
         socket
             .set_multicast_loop_v4(true)
             .expect("Failed to set broadcast");
+        // TODO: set multicast address from config
         socket
             .join_multicast_v4("224.0.0.1".parse().unwrap(), "0.0.0.0".parse().unwrap())
             .expect("Failed to join multicast group");
         info!("Joined multicast group 224.0.0.1 successfully");
-        Server {
+        //TODO: set timeout from config
+        BroadcastServer {
             name,
             port,
             node,
@@ -45,7 +47,9 @@ impl Server {
             timeout: Duration::from_secs(5),
         }
     }
+}
 
+impl BroadcastServer {
     pub async fn scan_node(&self) {
         let cloned = self.clone();
         tokio::spawn(async move {
@@ -64,7 +68,8 @@ impl Server {
 
     async fn clean_node(&self) {
         loop {
-            sleep(Duration::from_secs(10)).await;
+            //TODO: set clean interval from config
+            sleep(Duration::from_secs(6)).await;
             let mut node_list = self.node_list.lock().await;
             let now = SystemTime::now()
                 .duration_since(time::UNIX_EPOCH)
@@ -107,17 +112,21 @@ impl Server {
         while let Ok(node_bytes) = self.node.clone().try_into() {
             let frame = UdpFrame::new(node_bytes);
             let data = frame.to_bytes();
+            if data.len() > 1400 {
+                panic!("Data is too large to send size is {}", data.len());
+            }
             self.clone()
                 .socket
                 .send_to(data.as_slice(), &format!("224.0.0.1:{}", self.port.clone()))
                 .await
                 .expect("Failed to send broadcast");
-            sleep(Duration::from_secs(5)).await;
+            //TODO: set notify interval from config
+            sleep(Duration::from_secs(3)).await;
         }
     }
 }
 
-impl Server {
+impl BroadcastServer {
     #![allow(unused_assignments)]
     pub async fn add_node(&self, mut node: Node) {
         let mut node_list = self.node_list.lock().await;
