@@ -15,9 +15,11 @@ linker = "x86_64-linux-musl-gcc"
 
 [dependencies]
 tokio = { version = "*", features = ["full"] }
+tokio-util = { version = "*", features = ["codec", "net"] }
 anyhow = "*"
 crossbeam = "*"
 futures = { version = "*" }
+uuid = { version = "*", features = ["v4"] }
 
 # logger
 tracing = "*"
@@ -27,6 +29,7 @@ tracing-subscriber = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = { version = "*" }
 serde_yaml = { version = "*" }
+postcard = { version = "*", features = ["alloc"] }
 
 #network 
 local-ip-address = "*"

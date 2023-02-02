@@ -1,14 +1,81 @@
 #![allow(dead_code)]
 use std::{
+    collections::HashMap,
     sync::Arc,
     time::{self, Duration, SystemTime},
 };
 
 use tokio::{net::UdpSocket, sync::Mutex, time::sleep};
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
-use super::frame::UdpFrame;
+use super::frame::Frame;
 use super::node::Node;
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
+struct FrameReceiverCacheKey {
+    id: String,
+    order_count: u8,
+}
+
+type InnderCache =
+    Arc<Mutex<HashMap<FrameReceiverCacheKey, (time::Instant, Arc<Mutex<Vec<Frame>>>)>>>;
+
+#[derive(Debug, Clone)]
+struct FrameReceiverCache {
+    cache: InnderCache,
+}
+
+impl FrameReceiverCache {
+    fn new() -> Self {
+        FrameReceiverCache {
+            cache: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    async fn is_complete(&self, frame: Frame) -> Option<Vec<Frame>> {
+        if frame.order_count == 0 {
+            return Some(vec![frame]);
+        }
+        self.clean_timeout_cache().await;
+        let mut cache = self.cache.lock().await;
+        let key = FrameReceiverCacheKey {
+            id: frame.id.clone(),
+            order_count: frame.order_count,
+        };
+        let complete = if let Some(cache_vec) = cache.get(&key) {
+            let mut cache_vec = cache_vec.1.lock().await;
+            cache_vec.push(frame.clone());
+            cache_vec.len() == frame.order_count as usize
+        } else {
+            cache.insert(
+                key.clone(),
+                (
+                    time::Instant::now(),
+                    Arc::new(Mutex::new(vec![frame.clone()])),
+                ),
+            );
+            false
+        };
+
+        if complete {
+            let cache_vec = cache.remove(&key).unwrap();
+            let cache_vec = cache_vec.1.lock().await;
+            Some(cache_vec.clone())
+        } else {
+            None
+        }
+    }
+
+    async fn clean_timeout_cache(&self) {
+        let mut cache = self.cache.lock().await;
+        cache.retain(|_, v| {
+            let time = v.0;
+            let now = time::Instant::now();
+            let duration = now.duration_since(time);
+            duration.as_secs() < 5
+        });
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct BroadcastServer {
@@ -18,6 +85,7 @@ pub struct BroadcastServer {
     pub node_list: Arc<Mutex<Vec<Node>>>,
     pub socket: Arc<UdpSocket>,
     pub timeout: Duration,
+    frame_receiver_cache: FrameReceiverCache,
 }
 
 impl BroadcastServer {
@@ -45,6 +113,7 @@ impl BroadcastServer {
             node_list: Arc::new(Mutex::new(vec![])),
             socket: Arc::new(socket),
             timeout: Duration::from_secs(5),
+            frame_receiver_cache: FrameReceiverCache::new(),
         }
     }
 }
@@ -94,34 +163,53 @@ impl BroadcastServer {
 
     async fn listen_notify(&self) {
         loop {
-            let mut buf = vec![0u8; 1400];
-            let (len, _addr) = self
-                .clone()
-                .socket
-                .recv_from(&mut buf)
-                .await
-                .expect("Failed to receive broadcast");
-            buf.truncate(len);
-            let frame = UdpFrame::from_vec(buf);
-            let node = Node::try_from(frame.data).expect("Failed to parse node");
-            self.add_node(node).await;
+            if let Some(frame) = self.receive_frame().await {
+                if let Ok(node) = Node::try_from(frame.data()) {
+                    self.add_node(node).await;
+                }
+            }
         }
     }
 
     async fn notify_node(&self) {
         while let Ok(node_bytes) = self.node.clone().try_into() {
-            let frame = UdpFrame::new(node_bytes);
-            let data = frame.to_bytes();
-            if data.len() > 1400 {
-                panic!("Data is too large to send size is {}", data.len());
-            }
-            self.clone()
-                .socket
-                .send_to(data.as_slice(), &format!("224.0.0.1:{}", self.port.clone()))
-                .await
-                .expect("Failed to send broadcast");
+            let frame = Frame::new(node_bytes);
+            self.send_frame(frame).await;
             //TODO: set notify interval from config
             sleep(Duration::from_secs(3)).await;
+        }
+    }
+
+    async fn send_frame(&self, frame: Frame) {
+        let frames = frame.split_frame();
+        for frame in frames {
+            let frame_bytes = frame.to_bytes();
+            let frame_bytes = frame_bytes.as_slice();
+            trace!("Send frame: {:?}", frame_bytes.len());
+            self.clone()
+                .socket
+                .send_to(frame_bytes, &format!("224.0.0.1:{}", self.port.clone()))
+                .await
+                .expect("Failed to send broadcast");
+        }
+    }
+
+    async fn receive_frame(&self) -> Option<Frame> {
+        let mut buf = vec![0u8; 1500];
+        let (len, _addr) = self
+            .clone()
+            .socket
+            .recv_from(&mut buf)
+            .await
+            .expect("Failed to receive broadcast");
+        buf.truncate(len);
+        match Frame::from_vec(buf) {
+            Some(frame) => self
+                .frame_receiver_cache
+                .is_complete(frame)
+                .await
+                .map(Frame::merge_frames),
+            None => None,
         }
     }
 }
