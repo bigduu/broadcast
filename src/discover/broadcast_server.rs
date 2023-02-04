@@ -8,8 +8,7 @@ use std::{
 use tokio::{net::UdpSocket, sync::Mutex, time::sleep};
 use tracing::{error, info, trace};
 
-use super::frame::Frame;
-use super::node::Node;
+use super::{node::Node, udp_frame::UDPFrame};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 struct FrameReceiverCacheKey {
@@ -18,7 +17,7 @@ struct FrameReceiverCacheKey {
 }
 
 type InnderCache =
-    Arc<Mutex<HashMap<FrameReceiverCacheKey, (time::Instant, Arc<Mutex<Vec<Frame>>>)>>>;
+    Arc<Mutex<HashMap<FrameReceiverCacheKey, (time::Instant, Arc<Mutex<Vec<UDPFrame>>>)>>>;
 
 #[derive(Debug, Clone)]
 struct FrameReceiverCache {
@@ -32,7 +31,7 @@ impl FrameReceiverCache {
         }
     }
 
-    async fn is_complete(&self, frame: Frame) -> Option<Vec<Frame>> {
+    async fn is_complete(&self, frame: UDPFrame) -> Option<Vec<UDPFrame>> {
         if frame.order_count == 0 {
             return Some(vec![frame]);
         }
@@ -177,14 +176,14 @@ impl BroadcastServer {
 
     async fn notify_node(&self) {
         while let Ok(node_bytes) = self.node.clone().try_into() {
-            let frame = Frame::new(node_bytes);
+            let frame = UDPFrame::new(node_bytes);
             self.send_frame(frame).await;
             //TODO: set notify interval from config
             sleep(Duration::from_secs(3)).await;
         }
     }
 
-    async fn send_frame(&self, frame: Frame) {
+    async fn send_frame(&self, frame: UDPFrame) {
         let frames = frame.split_frame();
         for frame in frames {
             let frame_bytes = frame.to_bytes();
@@ -204,7 +203,7 @@ impl BroadcastServer {
         }
     }
 
-    async fn receive_frame(&self) -> Option<Frame> {
+    async fn receive_frame(&self) -> Option<UDPFrame> {
         let mut buf = vec![0u8; 1500];
         let recive = self.clone().socket.recv_from(&mut buf).await;
         let (len, _addr) = match recive {
@@ -215,12 +214,12 @@ impl BroadcastServer {
             }
         };
         buf.truncate(len);
-        match Frame::from_vec(buf) {
+        match UDPFrame::from_vec(buf) {
             Some(frame) => self
                 .frame_receiver_cache
                 .is_complete(frame)
                 .await
-                .map(Frame::merge_frames),
+                .map(UDPFrame::merge_frames),
             None => None,
         }
     }

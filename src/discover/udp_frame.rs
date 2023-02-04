@@ -13,7 +13,7 @@ pub enum FrameType {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct Frame {
+pub struct UDPFrame {
     pub id: String,
     pub version: u8,
     pub frame_type: u8,
@@ -23,10 +23,10 @@ pub struct Frame {
     pub data: Vec<u8>,
 }
 
-impl Frame {
+impl UDPFrame {
     pub fn new(data: Vec<u8>) -> Self {
         let length = data.len() as u16;
-        Frame {
+        UDPFrame {
             id: SNOWFLAKE.lock().unwrap().generate().to_string(),
             version: 1u8,
             frame_type: 1u8,
@@ -44,7 +44,7 @@ impl Frame {
         let data: Vec<u8> = data.into();
         //read u8
         let length = data.len() as u16;
-        Frame {
+        UDPFrame {
             id: SNOWFLAKE.lock().unwrap().generate().to_string(),
             version: 1u8,
             frame_type: 1u8,
@@ -57,7 +57,7 @@ impl Frame {
 
     fn new_from_frame_bytes_order(frame: &Self, data: Vec<u8>, order: u8, order_count: u8) -> Self {
         let length = data.len() as u16;
-        Frame {
+        UDPFrame {
             id: frame.id.clone(),
             version: frame.version,
             frame_type: frame.frame_type,
@@ -69,15 +69,19 @@ impl Frame {
     }
 }
 
-impl Frame {
-    pub fn split_frame(&self) -> Vec<Frame> {
+impl UDPFrame {
+    pub fn split_frame(&self) -> Vec<UDPFrame> {
         let mut result = vec![];
         if self.data.len() > 1000 {
             let chunks = self.data.chunks(1000);
             let len = chunks.len();
             for (index, chunk) in chunks.enumerate() {
-                let frame =
-                    Frame::new_from_frame_bytes_order(self, chunk.to_vec(), index as u8, len as u8);
+                let frame = UDPFrame::new_from_frame_bytes_order(
+                    self,
+                    chunk.to_vec(),
+                    index as u8,
+                    len as u8,
+                );
                 result.push(frame);
             }
         } else {
@@ -86,29 +90,29 @@ impl Frame {
         result
     }
 
-    pub fn merge_frames(mut frames: Vec<Frame>) -> Self {
+    pub fn merge_frames(mut frames: Vec<UDPFrame>) -> Self {
         let mut data = vec![];
         frames.sort();
         for frame in frames {
             data.extend_from_slice(&frame.data);
         }
-        Frame::new_from(data)
+        UDPFrame::new_from(data)
     }
 }
 
-impl Ord for Frame {
+impl Ord for UDPFrame {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.order.cmp(&other.order)
     }
 }
 
-impl PartialOrd for Frame {
+impl PartialOrd for UDPFrame {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Frame {
+impl UDPFrame {
     pub fn from_vec(bytes: Vec<u8>) -> Option<Self> {
         match postcard::from_bytes(&bytes) {
             Ok(frame) => Some(frame),
@@ -124,8 +128,8 @@ impl Frame {
     }
 }
 
-impl From<Frame> for Vec<u8> {
-    fn from(frame: Frame) -> Self {
+impl From<UDPFrame> for Vec<u8> {
+    fn from(frame: UDPFrame) -> Self {
         frame.to_bytes()
     }
 }
@@ -135,9 +139,9 @@ mod tests {
     use super::*;
     #[test]
     fn test_frame() {
-        let frame = Frame::new_from("hello world".to_string());
+        let frame = UDPFrame::new_from("hello world".to_string());
         let bytes = frame.to_bytes();
-        let frame = Frame::from_vec(bytes);
+        let frame = UDPFrame::from_vec(bytes);
         assert!(frame.is_some());
         let frame = frame.unwrap();
         assert_eq!(frame.data, "hello world".as_bytes());
@@ -145,9 +149,9 @@ mod tests {
 
     #[test]
     fn test_split_frame() {
-        let frame = Frame::new_from("hello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello world".to_string());
+        let frame = UDPFrame::new_from("hello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello world".to_string());
         let frames = frame.split_frame();
-        let frame = Frame::merge_frames(frames);
+        let frame = UDPFrame::merge_frames(frames);
         assert_eq!(frame.data, "hello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello worldhello world".as_bytes());
     }
 }

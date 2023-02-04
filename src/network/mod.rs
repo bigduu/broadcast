@@ -16,7 +16,7 @@ impl NetworkInterface {
     }
 }
 
-/// List all local ipv4 ip addresses.
+// List all local ipv4 ip addresses.
 pub fn list_ipv4_addresses() -> Vec<NetworkInterface> {
     let network_interfaces = list_afinet_netifas().expect("Failed to list network interfaces");
     network_interfaces
