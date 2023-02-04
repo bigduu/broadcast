@@ -46,10 +46,10 @@ impl TryFrom<Node> for Vec<u8> {
     }
 }
 
-impl TryFrom<Vec<u8>> for Node {
+impl TryFrom<&Vec<u8>> for Node {
     type Error = Error;
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        serde_json::from_slice(&value)
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        serde_json::from_slice(value)
     }
 }
 
@@ -60,7 +60,7 @@ mod tests {
     fn test_node() {
         let node = Node::new("server".to_string(), 8080, 0);
         let node_bytes: Vec<u8> = node.try_into().unwrap();
-        let node = Node::try_from(node_bytes).unwrap();
+        let node = Node::try_from(node_bytes.as_ref()).unwrap();
         assert_eq!(node.name, "server");
         assert_eq!(node.port, 8080);
     }

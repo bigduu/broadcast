@@ -23,6 +23,7 @@ futures = { version = "*" }
 # logger
 tracing = "*"
 tracing-subscriber = "*"
+tracing-appender = "*"
 
 # serde
 serde = { version = "*", features = ["derive"] }

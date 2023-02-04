@@ -60,7 +60,7 @@ impl FrameReceiverCache {
         if complete {
             let cache_vec = cache.remove(&key).unwrap();
             let cache_vec = cache_vec.1.lock().await;
-            Some(cache_vec.clone())
+            Some(cache_vec.to_vec())
         } else {
             None
         }
@@ -168,7 +168,7 @@ impl BroadcastServer {
     async fn listen_notify(&self) {
         loop {
             if let Some(frame) = self.receive_frame().await {
-                if let Ok(node) = Node::try_from(frame.data()) {
+                if let Ok(node) = Node::try_from(&frame.data) {
                     self.add_node(node).await;
                 }
             }
