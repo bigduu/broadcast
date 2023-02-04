@@ -2,6 +2,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use tracing::error;
 
+use crate::id::snowflake::SNOWFLAKE;
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub enum FrameType {
     Notify,
@@ -25,7 +27,7 @@ impl Frame {
     pub fn new(data: Vec<u8>) -> Self {
         let length = data.len() as u16;
         Frame {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: SNOWFLAKE.lock().unwrap().generate().to_string(),
             version: 1u8,
             frame_type: 1u8,
             length,
@@ -43,7 +45,7 @@ impl Frame {
         //read u8
         let length = data.len() as u16;
         Frame {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: SNOWFLAKE.lock().unwrap().generate().to_string(),
             version: 1u8,
             frame_type: 1u8,
             length,

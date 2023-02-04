@@ -19,7 +19,6 @@ tokio-util = { version = "*", features = ["codec", "net"] }
 anyhow = "*"
 crossbeam = "*"
 futures = { version = "*" }
-uuid = { version = "*", features = ["v4"] }
 
 # logger
 tracing = "*"
@@ -36,3 +35,6 @@ local-ip-address = "*"
 
 #tools
 bytes = "*"
+uuid = { version = "*", features = ["v4"] }
+rs-snowflake = "*"
+lazy_static = "*"

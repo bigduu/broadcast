@@ -3,6 +3,7 @@ use local_ip_address::local_ip;
 
 mod config;
 mod discover;
+mod id;
 mod network;
 
 #[tokio::main]

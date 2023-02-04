@@ -72,6 +72,7 @@ impl FrameReceiverCache {
             let time = v.0;
             let now = time::Instant::now();
             let duration = now.duration_since(time);
+            //TODO: set timeout from config
             duration.as_secs() < 5
         });
     }
@@ -140,9 +141,13 @@ impl BroadcastServer {
             //TODO: set clean interval from config
             sleep(Duration::from_secs(6)).await;
             let mut node_list = self.node_list.lock().await;
-            let now = SystemTime::now()
-                .duration_since(time::UNIX_EPOCH)
-                .expect("Failed to get current time");
+            let now = match SystemTime::now().duration_since(time::UNIX_EPOCH) {
+                Ok(now) => now,
+                Err(e) => {
+                    error!("Failed to get current time with error {}", e);
+                    continue;
+                }
+            };
             node_list.retain(|node| {
                 let hit_timestamp = Duration::from_millis(node.hit_timestamp as u64);
                 now - hit_timestamp < self.timeout
@@ -151,11 +156,10 @@ impl BroadcastServer {
                 "In server node list: {:#?}",
                 node_list
                     .iter()
-                    .map(|n| format!(
-                        "Node: {}, timestamp: {}",
-                        n.clone().name,
-                        n.clone().hit_timestamp
-                    ))
+                    .map(|n| {
+                        let n = n.clone();
+                        format!("Node: name: {}, timestamp: {}", n.name, n.hit_timestamp)
+                    })
                     .collect::<Vec<String>>()
             );
         }
@@ -186,22 +190,30 @@ impl BroadcastServer {
             let frame_bytes = frame.to_bytes();
             let frame_bytes = frame_bytes.as_slice();
             trace!("Send frame: {:?}", frame_bytes.len());
-            self.clone()
+            match self
+                .clone()
                 .socket
                 .send_to(frame_bytes, &format!("224.0.0.1:{}", self.port.clone()))
                 .await
-                .expect("Failed to send broadcast");
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("Failed to send broadcast with error {}", e)
+                }
+            }
         }
     }
 
     async fn receive_frame(&self) -> Option<Frame> {
         let mut buf = vec![0u8; 1500];
-        let (len, _addr) = self
-            .clone()
-            .socket
-            .recv_from(&mut buf)
-            .await
-            .expect("Failed to receive broadcast");
+        let recive = self.clone().socket.recv_from(&mut buf).await;
+        let (len, _addr) = match recive {
+            Ok((len, addr)) => (len, addr),
+            Err(e) => {
+                error!("Failed to receive broadcast with error {}", e);
+                return None;
+            }
+        };
         buf.truncate(len);
         match Frame::from_vec(buf) {
             Some(frame) => self
