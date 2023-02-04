@@ -8,7 +8,9 @@ use std::{
 use tokio::{net::UdpSocket, sync::Mutex, time::sleep};
 use tracing::{error, info, trace};
 
-use super::{node::Node, udp_frame::UDPFrame};
+use crate::model::node::Node;
+
+use super::udp_frame::UDPFrame;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 struct FrameReceiverCacheKey {
@@ -230,7 +232,7 @@ impl BroadcastServer {
     pub async fn add_node(&self, mut node: Node) {
         let mut node_list = self.node_list.lock().await;
         let mut found = false;
-        for item in &mut *node_list {
+        for item in node_list.iter_mut() {
             if item.name == node.name {
                 found = true;
                 item.update_hit_timestamp();

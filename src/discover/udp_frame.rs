@@ -2,21 +2,19 @@ use serde::Deserialize;
 use serde::Serialize;
 use tracing::error;
 
-use crate::id::snowflake::SNOWFLAKE;
+use crate::model::snowflake::SNOWFLAKE;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub enum FrameType {
-    Notify,
-    Response,
-    Request,
-    ResponseAck,
+    Command,
+    Data,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct UDPFrame {
     pub id: String,
     pub version: u8,
-    pub frame_type: u8,
+    pub frame_type: FrameType,
     pub length: u16,
     pub order: u8,
     pub order_count: u8,
@@ -29,7 +27,7 @@ impl UDPFrame {
         UDPFrame {
             id: SNOWFLAKE.lock().unwrap().generate().to_string(),
             version: 1u8,
-            frame_type: 1u8,
+            frame_type: FrameType::Data,
             length,
             order: 0,
             order_count: 0,
@@ -47,7 +45,7 @@ impl UDPFrame {
         UDPFrame {
             id: SNOWFLAKE.lock().unwrap().generate().to_string(),
             version: 1u8,
-            frame_type: 1u8,
+            frame_type: FrameType::Data,
             length,
             order: 0,
             order_count: 0,
@@ -60,7 +58,7 @@ impl UDPFrame {
         UDPFrame {
             id: frame.id.clone(),
             version: frame.version,
-            frame_type: frame.frame_type,
+            frame_type: frame.frame_type.clone(),
             length,
             order,
             order_count,
@@ -100,18 +98,6 @@ impl UDPFrame {
     }
 }
 
-impl Ord for UDPFrame {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.order.cmp(&other.order)
-    }
-}
-
-impl PartialOrd for UDPFrame {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
 impl UDPFrame {
     pub fn from_vec(bytes: Vec<u8>) -> Option<Self> {
         match postcard::from_bytes(&bytes) {
@@ -131,6 +117,18 @@ impl UDPFrame {
 impl From<UDPFrame> for Vec<u8> {
     fn from(frame: UDPFrame) -> Self {
         frame.to_bytes()
+    }
+}
+
+impl Ord for UDPFrame {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.order.cmp(&other.order)
+    }
+}
+
+impl PartialOrd for UDPFrame {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 

@@ -5,7 +5,7 @@ use tracing_subscriber::{fmt, prelude::__tracing_subscriber_SubscriberExt};
 
 mod config;
 mod discover;
-mod id;
+mod model;
 mod network;
 
 #[tokio::main]
