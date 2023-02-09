@@ -2,6 +2,7 @@
 use std::{
     collections::HashMap,
     sync::Arc,
+    thread,
     time::{self, Duration, SystemTime},
 };
 
@@ -93,10 +94,12 @@ pub struct BroadcastServer {
 impl BroadcastServer {
     pub async fn new(name: String, port: u16) -> Self {
         let node = Node::new_self_node(name.to_string(), port);
+        // TODO: try to kill port if it is already in use and try again
         let socket = UdpSocket::bind(&format!("0.0.0.0:{port}"))
             .await
             .unwrap_or_else(|e| {
                 error!("Failed to bind socket to port {} with error {}", port, e);
+                thread::sleep(Duration::from_secs(10));
                 panic!("Failed to bind socket to port {port}")
             });
         socket
