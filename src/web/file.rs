@@ -12,21 +12,13 @@ pub async fn download_file(req: HttpRequest) -> actix_web::Result<NamedFile> {
 }
 
 pub fn static_file() -> Files {
-    Files::new("/static", ".")
+    Files::new("/static", "./static")
         .show_files_listing()
-        .path_filter(|path, _| {
-            info!("path: {:?}", path.to_str().unwrap());
-            let current_dir = Path::new(".").join(path);
-            if current_dir.is_dir() {
-                true
-            } else {
-                current_dir
-                    .extension()
-                    .filter(|ex| {
-                        let ex = *ex;
-                        ex != "exe" && ex != "dll" && ex != "so" && ex != "dylib" && ex != "toml"
-                    })
-                    .is_some()
-            }
-        })
+        .index_file("index.html")
+}
+
+pub fn assets_file() -> Files {
+    Files::new("/assets", "./static/assets")
+        .show_files_listing()
+        .index_file("index.html")
 }

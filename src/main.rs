@@ -24,7 +24,7 @@ use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt,
 };
 use web::{
-    file::{download_file, static_file},
+    file::{assets_file, download_file, static_file},
     screen::screenshot,
     video::{delete_video, download_video, upload_video, video_list},
 };
@@ -38,8 +38,14 @@ mod screen;
 mod startup;
 mod web;
 
-async fn index() -> impl Responder {
+async fn health() -> impl Responder {
     HttpResponse::Ok().body("UP")
+}
+
+async fn index() -> impl Responder {
+    HttpResponse::Found()
+        .append_header(("location", "/static/index.html"))
+        .finish()
 }
 
 #[get("/nodes")]
@@ -78,10 +84,12 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .wrap(Cors::permissive())
             .service(static_file())
+            .service(assets_file())
             .app_data(Data::new(server.clone()))
             .service(get_nodes)
-            .route("/download/{filename:.*}", get().to(download_file))
             .route("/", get().to(index))
+            .route("/download/{filename:.*}", get().to(download_file))
+            .route("/health", get().to(health))
             .service(screenshot)
             .route("/video_list", get().to(video_list))
             .route("/video_list/{video}", get().to(download_video))
