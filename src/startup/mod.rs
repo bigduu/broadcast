@@ -17,7 +17,7 @@ pub fn auto_launch_self() {
                     info!("Auto launch is enabled");
                 } else {
                     info!("Auto launch is disabled");
-                    auto.enable().unwrap();
+                    let _ = auto.enable();
                 }
             }
             Err(e) => {

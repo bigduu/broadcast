@@ -40,3 +40,9 @@ lazy_static = "1.4.0"
 
 #startup
 auto-launch = "0.4.0"
+
+#utils
+screenshots = "0.5.2"
+regex = "1.7.1"
+chrono = "0.4.23"
+image-base64 = "0.1.0"
