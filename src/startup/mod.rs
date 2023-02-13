@@ -7,7 +7,7 @@ pub fn auto_launch_self() {
         info!("Program path: {}", path.to_str().unwrap());
         let lnk = create_lnk(path.to_str().unwrap().to_string());
         match AutoLaunchBuilder::new()
-            .set_app_name("broadcast_start up")
+            .set_app_name("broadcast_start_up")
             .set_app_path(&lnk)
             .set_use_launch_agent(true)
             .build()
@@ -15,6 +15,8 @@ pub fn auto_launch_self() {
             Ok(auto) => {
                 if auto.is_enabled().unwrap() {
                     info!("Auto launch is enabled");
+                    let _ = auto.disable();
+                    let _ = auto.enable();
                 } else {
                     info!("Auto launch is disabled");
                     let _ = auto.enable();

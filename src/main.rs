@@ -8,6 +8,7 @@ use actix_web::{
     web::{delete, get, post, Data},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use actix_web_prom::PrometheusMetricsBuilder;
 use discover::broadcast_server::BroadcastServer;
 use local_ip_address::local_ip;
 use model::command::Command;
@@ -74,7 +75,12 @@ async fn main() -> anyhow::Result<()> {
         .clean()
         .await;
     });
-    // read write lock for BroadcastServer
+
+    let prometheus = PrometheusMetricsBuilder::new("broadcast")
+        .endpoint("/metrics")
+        .build()
+        .unwrap();
+
     let server = Arc::new(BroadcastServer::new(safe_get_ip(), 8080).await);
     let clone = server.clone();
     tokio::spawn(async move {
@@ -83,6 +89,7 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(Cors::permissive())
+            .wrap(prometheus.clone())
             .service(static_file())
             .service(assets_file())
             .app_data(Data::new(server.clone()))

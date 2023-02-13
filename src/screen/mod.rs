@@ -5,6 +5,7 @@ use std::{
 };
 
 use chrono::{Datelike, Local, Timelike};
+use image_compressor::{compressor::Compressor, Factor};
 use screenshots::Screen;
 use tokio::{
     fs::{self, write},
@@ -55,6 +56,14 @@ impl ScreenCapture {
             {
                 error!("Failed to write file with error {:?}", e);
             }
+
+            let mut compressor = Compressor::new(
+                PathBuf::from(self.folder_name.clone()).join("latest.png"),
+                PathBuf::from(self.folder_name.clone()).join("latest.jpg"),
+            );
+            compressor.set_delete_origin(true);
+            compressor.set_factor(Factor::new(10., 0.2));
+            let _ = compressor.compress_to_jpg();
         } else {
             error!("Failed to capture screen");
         }
@@ -71,7 +80,7 @@ impl ScreenCapture {
                 let file_name = path
                     .file_name()
                     .and_then(|file_name| file_name.to_str())
-                    .filter(|file_name| file_name.contains("latest"))
+                    .filter(|file_name| file_name.contains("latest.jpg"))
                     .unwrap_or("");
                 if file_name.is_empty() {
                     continue;
@@ -89,7 +98,7 @@ impl ScreenCapture {
 
                 if let Err(e) = fs::rename(
                     format!("{}/{}", self.folder_name, file_name),
-                    format!("{}/{}.png", self.folder_name, now_string),
+                    format!("{}/{}.jpg", self.folder_name, now_string),
                 )
                 .await
                 {
