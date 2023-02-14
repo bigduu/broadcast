@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use futures::TryStreamExt;
 use reqwest::{
     multipart::{Form, Part},
@@ -5,6 +7,7 @@ use reqwest::{
 };
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
+use tracing::{error, info};
 
 lazy_static::lazy_static! {
     static ref CLIENT: Client = Client::new();
@@ -24,4 +27,16 @@ pub async fn upload_file(file_path: &str, filename: &str) -> anyhow::Result<()> 
         .send()
         .await?;
     Ok(())
+}
+
+pub async fn pause() {
+    Command::new("pause.bat")
+        .output()
+        .expect("failed to execute process");
+}
+
+pub async fn play() {
+    Command::new("play.bat")
+        .output()
+        .expect("failed to execute process");
 }

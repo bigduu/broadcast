@@ -1,6 +1,7 @@
 use auto_launch::AutoLaunchBuilder;
 use tracing::{error, info};
 
+#[allow(dead_code)]
 pub fn auto_launch_self() {
     // Get the program location
     if let Ok(path) = std::env::current_exe() {

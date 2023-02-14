@@ -10,6 +10,8 @@ use std::path::Path;
 use tracing::error;
 use tracing::info;
 
+use super::client;
+
 pub async fn video_list() -> web::Json<Vec<String>> {
     let mut video_list = Vec::new();
     Path::new(".")
@@ -89,4 +91,14 @@ pub async fn delete_video(req: HttpRequest) -> actix_web::Result<HttpResponse> {
     } else {
         Ok(HttpResponse::Ok().into())
     }
+}
+
+pub async fn play() -> actix_web::Result<HttpResponse> {
+    client::play().await;
+    Ok(HttpResponse::Ok().into())
+}
+
+pub async fn pause() -> actix_web::Result<HttpResponse>{
+    client::pause().await;
+    Ok(HttpResponse::Ok().into())
 }

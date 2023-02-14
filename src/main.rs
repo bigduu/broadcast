@@ -13,7 +13,6 @@ use discover::broadcast_server::BroadcastServer;
 use local_ip_address::local_ip;
 use model::command::Command;
 use network::safe_get_ip;
-use startup::auto_launch_self;
 use tokio::{
     sync::{Mutex, RwLock},
     time::sleep,
@@ -27,7 +26,7 @@ use tracing_subscriber::{
 use web::{
     file::{assets_file, download_file, static_file},
     screen::screenshot,
-    video::{delete_video, download_video, upload_video, video_list},
+    video::{delete_video, download_video, pause, play, upload_video, video_list},
 };
 
 mod cleaner;
@@ -58,7 +57,7 @@ async fn get_nodes(server: Data<Arc<BroadcastServer>>) -> impl Responder {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _guard = init_tracing();
-    auto_launch_self();
+    // startup::auto_launch_self();
     tokio::spawn(async {
         screen::ScreenCapture::new().capture().await;
     });
@@ -102,6 +101,8 @@ async fn main() -> anyhow::Result<()> {
             .route("/video_list/{video}", get().to(download_video))
             .route("/video_list/{video}", post().to(upload_video))
             .route("/video_list/{video}", delete().to(delete_video))
+            .route("/play", get().to(play))
+            .route("/pause", get().to(pause))
     })
     //TODO should load from config file
     .bind(("0.0.0.0", 8081))?
