@@ -1,0 +1,16 @@
+[package]
+name = "screen"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.25", features = ["full"] }
+anyhow = "1.0"
+# logger
+tracing = "0.1"
+#utils
+screenshots = "0.5.2"
+chrono = "0.4.23"
+image_compressor = "1.3.0"
