@@ -24,7 +24,7 @@ jobs:
           command: build
           args: --release --all-features
       - name: Tar files
-        run: tar -cvf ${{matrix.os}}-release.tar target/release/broad* LICENSE.md static/
+        run: tar -cvf ${{matrix.os}}-release.tar target/release/serve* LICENSE.md static/
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
