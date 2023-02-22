@@ -1,6 +1,7 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse};
+use command;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use std::io::Error;
@@ -100,5 +101,15 @@ pub async fn play() -> actix_web::Result<HttpResponse> {
 
 pub async fn pause() -> actix_web::Result<HttpResponse> {
     client::pause().await;
+    Ok(HttpResponse::Ok().into())
+}
+
+pub async fn open_player() -> actix_web::Result<HttpResponse> {
+    command::open_player();
+    Ok(HttpResponse::Ok().into())
+}
+
+pub async fn kill_player() -> actix_web::Result<HttpResponse> {
+    command::kill_player();
     Ok(HttpResponse::Ok().into())
 }

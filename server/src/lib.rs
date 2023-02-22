@@ -12,7 +12,9 @@ use file::{assets_file, download_file, static_file};
 use logger::init_tracing;
 use screen_controller::screenshot;
 use utils::safe_get_ip;
-use video::{delete_video, download_video, pause, play, upload_video, video_list};
+use video::{
+    delete_video, download_video, kill_player, open_player, pause, play, upload_video, video_list,
+};
 
 pub mod client;
 pub mod file;
@@ -85,6 +87,8 @@ pub async fn run() -> anyhow::Result<()> {
             .route("/video_list/{video}", delete().to(delete_video))
             .route("/play", get().to(play))
             .route("/pause", get().to(pause))
+            .route("/open_player", get().to(open_player))
+            .route("/kill_player", get().to(kill_player))
     })
     //TODO should load from config file
     .bind(("0.0.0.0", 8081))?

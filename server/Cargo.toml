@@ -39,3 +39,4 @@ screen = { path = "../screen" }
 discover = { path = "../discover" }
 logger = { path = "../logger" }
 utils = { path = "../utils" }
+command = { path = "../command" }
