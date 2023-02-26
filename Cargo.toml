@@ -21,6 +21,7 @@ members = [
   "screen",
   "utils",
   "server",
+  "storage",
 ]
 [[bin]]
 name = "server"
@@ -28,6 +29,9 @@ path = "src/main.rs"
 
 [dependencies]
 server = { path = "server" }
+config = { path = "config" }
+logger = { path = "logger" }
+utils = { path = "utils" }
 tokio = { version = "1.25", features = ["full"] }
 anyhow = "1.0"
 

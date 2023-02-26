@@ -9,7 +9,6 @@ use actix_web::{
 };
 use discover::broadcast_server::BroadcastServer;
 use file::{assets_file, download_file, static_file};
-use logger::init_tracing;
 use screen_controller::screenshot;
 use utils::safe_get_ip;
 use video::{
@@ -60,7 +59,6 @@ pub async fn clear() {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-    let _guard = init_tracing("broadcast_log", &safe_get_ip());
 
     screen_shot().await;
     clear().await;
