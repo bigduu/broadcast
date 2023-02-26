@@ -21,8 +21,6 @@ actix-web-prom = "0.6.0"
 
 # logger
 tracing = "0.1"
-tracing-subscriber = "0.3"
-tracing-appender = "0.2"
 
 # serde
 serde = { version = "1.0", features = ["derive"] }
@@ -37,6 +35,6 @@ image-base64 = "0.1.0"
 cleaner = { path = "../cleaner" }
 screen = { path = "../screen" }
 discover = { path = "../discover" }
-logger = { path = "../logger" }
 utils = { path = "../utils" }
 command = { path = "../command" }
+config = { path = "../config" }

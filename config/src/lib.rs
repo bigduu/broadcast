@@ -1,23 +1,22 @@
-#![allow(dead_code)]
-use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    pub board_ip: String,
-    pub board_port: u16,
-    pub node_timeout: u16,
+use storage::Storage;
+use tokio::sync::Mutex;
+
+use crate::model::Config;
+
+pub mod model;
+
+lazy_static::lazy_static! {
+    static ref STORAGE: Arc<Mutex<Storage<Config>>> = Arc::new(Mutex::new(Storage::new("config.json".into())));
 }
 
-impl Config {
-    pub fn board_ip(&self) -> &str {
-        self.board_ip.as_ref()
-    }
+pub async fn get_config() -> Config {
+    let mut storage = STORAGE.lock().await;
+    storage.get().await.unwrap_or_default()
+}
 
-    pub fn board_port(&self) -> u16 {
-        self.board_port
-    }
-
-    pub fn node_timeout(&self) -> u16 {
-        self.node_timeout
-    }
+pub(crate) async fn update_config(config: Config) {
+    let mut storage = STORAGE.lock().await;
+    storage.set(config).await.unwrap();
 }
