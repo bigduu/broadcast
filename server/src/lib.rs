@@ -10,7 +10,6 @@ use actix_web::{
 use discover::broadcast_server::BroadcastServer;
 use file::{assets_file, download_file, static_file};
 use screen_controller::screenshot;
-use utils::safe_get_ip;
 use video::{
     delete_video, download_video, kill_player, open_player, pause, play, upload_video, video_list,
 };
@@ -59,14 +58,14 @@ pub async fn clear() {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-
     screen_shot().await;
     clear().await;
-
-    let server = Arc::new(BroadcastServer::new(safe_get_ip(), 8080).await);
-    let clone = server.clone();
+    let config_s = config::get_config().await;
+    let node_name = config_s.node_name().to_string();
+    let server = Arc::new(BroadcastServer::new(node_name, 8080).await);
+    let server_clone = server.clone();
     tokio::spawn(async move {
-        clone.scan_node().await;
+        server_clone.scan_node().await;
     });
     HttpServer::new(move || {
         App::new()
