@@ -29,7 +29,6 @@ path = "src/main.rs"
 
 [dependencies]
 server = { path = "server" }
-config = { path = "config" }
 logger = { path = "logger" }
 utils = { path = "utils" }
 tokio = { version = "1.25", features = ["full"] }
