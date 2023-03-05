@@ -1,41 +1,32 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+#![allow(dead_code)]
 
-use chrono::{Datelike, Local, Timelike};
+use std::time;
+
 use image_compressor::{compressor::Compressor, Factor};
 use screenshots::Screen;
-use tokio::{
-    fs::{self, write},
-    sync::Mutex,
-};
-use tracing::error;
+use tokio::{sync::mpsc::Sender, task::spawn_blocking};
+use tracing::{error, trace};
 
+#[derive(Debug)]
 pub struct ScreenCapture {
-    pub writing_lock: Arc<Mutex<bool>>,
-    folder_name: String,
-}
-
-impl Default for ScreenCapture {
-    fn default() -> Self {
-        Self {
-            writing_lock: Arc::new(Mutex::new(false)),
-            folder_name: "screenCapture".to_string(),
-        }
-    }
+    sender: Sender<Vec<u8>>,
 }
 
 impl ScreenCapture {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(sender: Sender<Vec<u8>>) -> Self {
+        Self { sender }
+    }
+
+    pub fn get_sender(&self) -> Sender<Vec<u8>> {
+        self.sender.clone()
     }
 
     pub async fn capture(&self) {
         loop {
-            tokio::time::sleep(Duration::from_secs(1)).await;
             if let Ok(screens) = Screen::all() {
                 for screen in screens {
                     if screen.display_info.is_primary {
-                        let _ = self.writing_lock.lock().await;
-                        self.do_capture(screen).await;
+                        self.do_capture_channel(screen).await;
                     }
                 }
             } else {
@@ -44,69 +35,60 @@ impl ScreenCapture {
         }
     }
 
-    async fn do_capture(&self, screen: Screen) {
-        if let Ok(image) = screen.capture() {
-            if let Err(e) = fs::create_dir_all(self.folder_name.clone()).await {
-                error!("Failed to create dir with error {:?}", e);
-            }
-            self.archive_file().await;
-            if let Err(e) = write(
-                format!("{}/{}.png", self.folder_name, "latest"),
-                image.buffer(),
-            )
-            .await
-            {
-                error!("Failed to write file with error {:?}", e);
-            }
-
-            let mut compressor = Compressor::new(
-                PathBuf::from(self.folder_name.clone()).join("latest.png"),
-                PathBuf::from(self.folder_name.clone()).join("latest.jpg"),
+    async fn do_capture_channel(&self, screen: Screen) {
+        let capture_start_time = time::Instant::now();
+        if let Ok(image) = spawn_blocking(move || screen.capture()).await {
+            let image = image.expect("Failed to capture image");
+            trace!(
+                "Capture image with size: {}x{} in {}ms",
+                image.width(),
+                image.height(),
+                capture_start_time.elapsed().as_millis()
             );
-            compressor.set_delete_origin(true);
-            compressor.set_factor(Factor::new(10., 0.2));
-            let _ = compressor.compress_to_jpg();
-        } else {
-            error!("Failed to capture screen");
-        }
-    }
-
-    async fn archive_file(&self) {
-        if let Ok(dir) = std::fs::read_dir(self.folder_name.clone()) {
-            let paths: Vec<PathBuf> = dir
-                .filter_map(|entry| entry.ok())
-                .map(|entry| entry.path())
-                .collect();
-
-            for path in paths {
-                let file_name = path
-                    .file_name()
-                    .and_then(|file_name| file_name.to_str())
-                    .filter(|file_name| file_name.contains("latest.jpg"))
-                    .unwrap_or("");
-                if file_name.is_empty() {
-                    continue;
-                }
-                let now = Local::now();
-                let now_string = format!(
-                    "{}-{:02}-{:02} {:02}_{:02}_{:02}",
-                    now.year(),
-                    now.month(),
-                    now.day(),
-                    now.hour(),
-                    now.minute(),
-                    now.second()
-                );
-
-                if let Err(e) = fs::rename(
-                    format!("{}/{}", self.folder_name, file_name),
-                    format!("{}/{}.jpg", self.folder_name, now_string),
-                )
-                .await
-                {
-                    error!("Failed to rename file with error {:?}", e);
-                }
+            let compress_start_time = time::Instant::now();
+            let buffer = image.buffer();
+            let image = self.do_compress(buffer.clone()).await;
+            trace!(
+                "Compress image with size: {} to {} in {}ms",
+                convert_bytes_size_to_readable(buffer.len()),
+                convert_bytes_size_to_readable(image.len()),
+                compress_start_time.elapsed().as_millis()
+            );
+            if (self.sender.send(image).await).is_ok() {
+                trace!("Sent image to channel");
+            } else {
+                error!("Failed to send image with error, may the channel is closed");
             }
         }
     }
+
+    async fn do_compress(&self, image: Vec<u8>) -> Vec<u8> {
+        spawn_blocking(|| {
+            let mut compressor = Compressor::new(image);
+            compressor.set_factor(Factor::new(50., 0.5));
+            compressor
+                .compress_image()
+                .expect("Failed to compress image")
+        })
+        .await
+        .expect("Failed to spawn blocking")
+    }
+}
+
+fn convert_bytes_size_to_readable(size: usize) -> String {
+    let mut size = size as f64;
+    let mut unit = "B";
+    if size > 1024. {
+        size /= 1024.;
+        unit = "KB";
+    }
+    if size > 1024. {
+        size /= 1024.;
+        unit = "MB";
+    }
+    if size > 1024. {
+        size /= 1024.;
+        unit = "GB";
+    }
+    format!("{:.2}{}", size, unit)
 }
