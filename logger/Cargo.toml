@@ -9,6 +9,7 @@ edition = "2021"
 tokio = { version = "1.25", features = ["full"] }
 # logger
 tracing = "0.1"
+tracing-log = "0.1"
 tracing-subscriber = "0.3"
 tracing-appender = "0.2"
 

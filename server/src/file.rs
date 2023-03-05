@@ -18,5 +18,9 @@ pub fn static_file() -> Files {
 pub fn assets_file() -> Files {
     Files::new("/assets", "./static/assets")
         .show_files_listing()
-        .index_file("index.html")
+}
+
+pub fn assets_icon() -> Files {
+    Files::new("/libai.svg", "./static/libai.svg")
+        .show_files_listing()
 }

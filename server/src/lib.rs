@@ -1,15 +1,18 @@
 use std::{sync::Arc, time::Duration};
 
-use ::screen::ScreenCapture;
 use actix_cors::Cors;
 use actix_web::{
-    get,
+    get, middleware,
     web::{delete, get, post, Data},
     App, HttpResponse, HttpServer, Responder,
 };
 use discover::broadcast_server::BroadcastServer;
 use file::{assets_file, download_file, static_file};
 use screen_controller::screenshot;
+use tokio::sync::{
+    mpsc::{channel, Receiver},
+    Mutex,
+};
 use video::{
     delete_video, download_video, kill_player, open_player, pause, play, upload_video, video_list,
 };
@@ -35,18 +38,22 @@ pub async fn get_nodes(server: Data<Arc<BroadcastServer>>) -> impl Responder {
     HttpResponse::Ok().json(nods)
 }
 
-pub async fn screen_shot() {
-    tokio::spawn(async {
-        ScreenCapture::new().capture().await;
+pub async fn screen_shot() -> Receiver<Vec<u8>> {
+    let (tx, rx) = channel(1);
+    tokio::spawn(async move {
+        let capture = screen::ScreenCapture::new(tx);
+        capture.capture().await;
     });
+    rx
 }
 
 pub async fn clear() {
-    tokio::spawn(async {
-        cleaner::Cleaner::new_date_time("screenCapture".to_string(), Duration::from_secs(5))
-            .clean()
-            .await;
-    });
+    // After use channel to send image, we don't need this
+    // tokio::spawn(async {
+    //     cleaner::Cleaner::new_date_time("screenCapture".to_string(), Duration::from_secs(5))
+    //         .clean()
+    //         .await;
+    // });
     tokio::spawn(async {
         cleaner::Cleaner::new_date(
             "broadcast_log".to_string(),
@@ -58,7 +65,8 @@ pub async fn clear() {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-    screen_shot().await;
+    let receiver = screen_shot().await;
+    let rx = Arc::new(Mutex::new(receiver));
     clear().await;
     let config_s = config::get_config().await;
     let node_name = config_s.node_name().to_string();
@@ -69,10 +77,13 @@ pub async fn run() -> anyhow::Result<()> {
     });
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Logger::default())
+            .wrap(middleware::Compress::default())
             .wrap(Cors::permissive())
             .service(static_file())
             .service(assets_file())
             .app_data(Data::new(server.clone()))
+            .app_data(Data::new(rx.clone()))
             .service(get_nodes)
             .route("/", get().to(index))
             .route("/download/{filename:.*}", get().to(download_file))
