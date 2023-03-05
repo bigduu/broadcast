@@ -2,8 +2,16 @@
 name = "server"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
+[package.metadata.build]
+rerun-if-changed = [
+  "../player-manager",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "server"
 
 [dependencies]
 tokio = { version = "1.25", features = ["full"] }
@@ -21,6 +29,8 @@ actix-web-prom = "0.6.0"
 
 # logger
 tracing = "0.1"
+tracing-subscriber = "0.3"
+tracing-appender = "0.2"
 
 # serde
 serde = { version = "1.0", features = ["derive"] }
@@ -38,3 +48,4 @@ discover = { path = "../discover" }
 utils = { path = "../utils" }
 command = { path = "../command" }
 config = { path = "../config" }
+logger = { path = "../logger" }
