@@ -1,82 +1,15 @@
 #![allow(dead_code)]
 use std::{
-    collections::HashMap,
     sync::Arc,
     thread,
     time::{self, Duration, SystemTime},
 };
 
+use domain::{node::Node, udp_frame::UDPFrame};
 use tokio::{net::UdpSocket, sync::Mutex, time::sleep};
 use tracing::{error, info, trace};
 
-use crate::{node::Node, udp_frame::UDPFrame};
-
-#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-struct FrameReceiverCacheKey {
-    id: String,
-    order_count: u8,
-}
-
-type InnderCache =
-    Arc<Mutex<HashMap<FrameReceiverCacheKey, (time::Instant, Arc<Mutex<Vec<UDPFrame>>>)>>>;
-
-#[derive(Debug, Clone)]
-struct FrameReceiverCache {
-    cache: InnderCache,
-}
-
-impl FrameReceiverCache {
-    fn new() -> Self {
-        FrameReceiverCache {
-            cache: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-
-    async fn is_complete(&self, frame: UDPFrame) -> Option<Vec<UDPFrame>> {
-        if frame.order_count == 0 {
-            return Some(vec![frame]);
-        }
-        self.clean_timeout_cache().await;
-        let mut cache = self.cache.lock().await;
-        let key = FrameReceiverCacheKey {
-            id: frame.id.clone(),
-            order_count: frame.order_count,
-        };
-        let complete = if let Some(cache_vec) = cache.get(&key) {
-            let mut cache_vec = cache_vec.1.lock().await;
-            cache_vec.push(frame.clone());
-            cache_vec.len() == frame.order_count as usize
-        } else {
-            cache.insert(
-                key.clone(),
-                (
-                    time::Instant::now(),
-                    Arc::new(Mutex::new(vec![frame.clone()])),
-                ),
-            );
-            false
-        };
-
-        if complete {
-            let cache_vec = cache.remove(&key).unwrap();
-            let cache_vec = cache_vec.1.lock().await;
-            Some(cache_vec.to_vec())
-        } else {
-            None
-        }
-    }
-
-    async fn clean_timeout_cache(&self) {
-        let mut cache = self.cache.lock().await;
-        cache.retain(|_, v| {
-            let time = v.0;
-            let now = time::Instant::now();
-            let duration = now.duration_since(time);
-            //TODO: set timeout from config
-            duration.as_secs() < 5
-        });
-    }
-}
+use crate::frame_cache::FrameReceiverCache;
 
 #[derive(Debug, Clone)]
 pub struct BroadcastServer {
@@ -164,6 +97,11 @@ impl BroadcastServer {
                     })
                     .collect::<Vec<String>>()
             );
+
+            let mut config = config::get_config().await;
+            config
+                .set_node_list(self.node_list.lock().await.clone())
+                .await;
         }
     }
 
@@ -172,6 +110,10 @@ impl BroadcastServer {
             if let Some(frame) = self.receive_frame().await {
                 if let Ok(node) = Node::try_from(&frame.data) {
                     self.add_node(node).await;
+                    let mut config = config::get_config().await;
+                    config
+                        .set_node_list(self.node_list.lock().await.clone())
+                        .await;
                 }
             }
         }

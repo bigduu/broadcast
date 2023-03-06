@@ -48,12 +48,6 @@ pub async fn screen_shot() -> Receiver<Vec<u8>> {
 }
 
 pub async fn clear() {
-    // After use channel to send image, we don't need this
-    // tokio::spawn(async {
-    //     cleaner::Cleaner::new_date_time("screenCapture".to_string(), Duration::from_secs(5))
-    //         .clean()
-    //         .await;
-    // });
     tokio::spawn(async {
         cleaner::Cleaner::new_date(
             "broadcast_log".to_string(),

@@ -65,7 +65,7 @@ impl ScreenCapture {
     async fn do_compress(&self, image: Vec<u8>) -> Vec<u8> {
         spawn_blocking(|| {
             let mut compressor = Compressor::new(image);
-            compressor.set_factor(Factor::new(50., 0.5));
+            compressor.set_factor(Factor::new(80., 0.8));
             compressor
                 .compress_image()
                 .expect("Failed to compress image")

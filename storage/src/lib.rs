@@ -12,10 +12,10 @@ pub struct Storage<T> {
 }
 
 impl<T> Storage<T>
-    where
-        T: DeserializeOwned + Serialize,
-        T: Clone,
-        T: Default,
+where
+    T: DeserializeOwned + Serialize,
+    T: Clone,
+    T: Default,
 {
     pub fn new(path: PathBuf) -> Self {
         block_on(Self::new_async(path))
@@ -64,7 +64,7 @@ impl<T> Storage<T>
     }
 
     async fn update_storage(path: &PathBuf, data: T) -> anyhow::Result<()> {
-        let serialized = serde_json::to_string(&data)?;
+        let serialized = serde_json::to_string_pretty(&data)?;
         write(path, serialized).await?;
         Ok(())
     }
