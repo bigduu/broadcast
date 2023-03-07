@@ -63,8 +63,7 @@ pub async fn run() -> anyhow::Result<()> {
     let rx = Arc::new(Mutex::new(receiver));
     clear().await;
     let config_s = config::get_config().await;
-    let node_name = config_s.node_name().to_string();
-    let server = Arc::new(BroadcastServer::new(node_name, 8080).await);
+    let server = Arc::new(BroadcastServer::from_config(config_s.clone()).await);
     let server_clone = server.clone();
     tokio::spawn(async move {
         server_clone.scan_node().await;

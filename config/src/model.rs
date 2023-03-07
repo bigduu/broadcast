@@ -11,6 +11,7 @@ pub struct Config {
     board_port: u16,
     node_timeout: u16,
     node_name: String,
+    #[serde(default)]
     node_list: Vec<Node>,
 }
 
