@@ -14,7 +14,8 @@ tracing = "0.1"
 
 # serde
 serde = { version = "1.0", features = ["derive"] }
-postcard = { version = "1.0.4", features = ["alloc"] }
 
 
 utils = { path = "../utils" }
+config = { path = "../config" }
+domain = { path = "../domain" }

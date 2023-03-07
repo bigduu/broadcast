@@ -4,9 +4,7 @@ version = "0.1.0"
 edition = "2021"
 build = "build.rs"
 [package.metadata.build]
-rerun-if-changed = [
-  "../player-manager",
-]
+rerun-if-changed = ["../player-manager"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

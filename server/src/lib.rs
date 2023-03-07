@@ -48,12 +48,6 @@ pub async fn screen_shot() -> Receiver<Vec<u8>> {
 }
 
 pub async fn clear() {
-    // After use channel to send image, we don't need this
-    // tokio::spawn(async {
-    //     cleaner::Cleaner::new_date_time("screenCapture".to_string(), Duration::from_secs(5))
-    //         .clean()
-    //         .await;
-    // });
     tokio::spawn(async {
         cleaner::Cleaner::new_date(
             "broadcast_log".to_string(),
@@ -69,8 +63,7 @@ pub async fn run() -> anyhow::Result<()> {
     let rx = Arc::new(Mutex::new(receiver));
     clear().await;
     let config_s = config::get_config().await;
-    let node_name = config_s.node_name().to_string();
-    let server = Arc::new(BroadcastServer::new(node_name, 8080).await);
+    let server = Arc::new(BroadcastServer::from_config(config_s.clone()).await);
     let server_clone = server.clone();
     tokio::spawn(async move {
         server_clone.scan_node().await;

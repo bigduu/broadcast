@@ -14,3 +14,4 @@ tracing = "0.1"
 #utils
 screenshots = "0.5.2"
 image_compressor = { git = "https://github.com/bigduu/image_compressor" }
+

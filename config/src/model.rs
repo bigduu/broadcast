@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+
+use domain::node::Node;
 use serde::{Deserialize, Serialize};
 
 use crate::update_config;
@@ -9,6 +11,8 @@ pub struct Config {
     board_port: u16,
     node_timeout: u16,
     node_name: String,
+    #[serde(default)]
+    node_list: Vec<Node>,
 }
 
 impl Config {
@@ -28,6 +32,10 @@ impl Config {
         self.node_name.as_ref()
     }
 
+    pub fn node_list(&self) -> &Vec<Node> {
+        self.node_list.as_ref()
+    }
+
     pub async fn set_board_ip(&mut self, board_ip: String) {
         self.board_ip = board_ip;
         update_config(self.clone()).await;
@@ -45,6 +53,11 @@ impl Config {
 
     pub async fn set_node_name(&mut self, node_name: String) {
         self.node_name = node_name;
+        update_config(self.clone()).await;
+    }
+
+    pub async fn set_node_list(&mut self, node_list: Vec<Node>) {
+        self.node_list = node_list;
         update_config(self.clone()).await;
     }
 }
