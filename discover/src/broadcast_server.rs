@@ -7,7 +7,11 @@ use std::{
 
 use config::model::Config;
 use domain::{node::Node, udp_frame::UDPFrame};
-use tokio::{net::UdpSocket, sync::RwLock, time::sleep};
+use tokio::{
+    net::UdpSocket,
+    sync::{Mutex, RwLock},
+    time::sleep,
+};
 use tracing::{error, info, trace};
 use utils::safe_get_ip;
 
@@ -15,9 +19,8 @@ use crate::frame_cache::FrameReceiverCache;
 
 #[derive(Debug, Clone)]
 pub struct BroadcastServer {
-    pub name: String,
     pub port: u16,
-    pub node: Node,
+    pub node: Arc<Mutex<Node>>,
     pub node_list: Arc<RwLock<Vec<Node>>>,
     pub socket: Arc<UdpSocket>,
     pub timeout: Duration,
@@ -57,9 +60,8 @@ impl BroadcastServer {
         info!("Joined multicast group 224.0.0.1 successfully");
         //TODO: set timeout from config
         BroadcastServer {
-            name,
             port,
-            node,
+            node: Arc::new(Mutex::new(node)),
             node_list: Arc::new(RwLock::new(vec![])),
             socket: Arc::new(socket),
             timeout: Duration::from_secs(5),
@@ -87,9 +89,8 @@ impl BroadcastServer {
         info!("Joined multicast group 224.0.0.1 successfully");
         //TODO: set timeout from config
         BroadcastServer {
-            name,
             port,
-            node,
+            node: Arc::new(Mutex::new(node)),
             node_list: Arc::new(RwLock::new(vec![])),
             socket: Arc::new(socket),
             timeout: Duration::from_secs(5),
@@ -144,8 +145,11 @@ impl BroadcastServer {
                     })
                     .collect::<Vec<String>>()
             );
-
             let mut config = config::get_config().await;
+            self.node
+                .lock()
+                .await
+                .update_name(config.node_name().to_string());
             config.set_node_list(node_list.clone()).await;
         }
     }
@@ -167,7 +171,7 @@ impl BroadcastServer {
     }
 
     async fn notify_node(&self) {
-        while let Ok(node_bytes) = self.node.clone().try_into() {
+        while let Ok(node_bytes) = self.node.lock().await.clone().try_into() {
             let frame = UDPFrame::new(node_bytes);
             self.send_frame(frame).await;
             //TODO: set notify interval from config
@@ -223,7 +227,7 @@ impl BroadcastServer {
         let mut node_list = self.node_list.write().await;
         let mut found = false;
         for item in node_list.iter_mut() {
-            if item.ipaddress == node.ipaddress {
+            if item.ipaddress == node.ipaddress && item.name == node.name {
                 found = true;
                 item.update_hit_timestamp();
                 return;

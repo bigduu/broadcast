@@ -35,6 +35,10 @@ impl Node {
             .expect("Failed to get duration since unix epoch")
             .as_millis();
     }
+
+    pub fn update_name(&mut self, name: String) {
+        self.name = name;
+    }
 }
 
 impl TryFrom<Node> for Vec<u8> {

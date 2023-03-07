@@ -6,6 +6,7 @@ use actix_web::{
     web::{delete, get, post, Data},
     App, HttpResponse, HttpServer, Responder,
 };
+use controller_config::{get_config, put_node_name};
 use discover::broadcast_server::BroadcastServer;
 use file::{assets_file, download_file, static_file};
 use screen_controller::screenshot;
@@ -18,6 +19,7 @@ use video::{
 };
 
 pub mod client;
+pub mod controller_config;
 pub mod file;
 pub mod screen_controller;
 pub mod video;
@@ -78,6 +80,8 @@ pub async fn run() -> anyhow::Result<()> {
             .app_data(Data::new(server.clone()))
             .app_data(Data::new(rx.clone()))
             .service(get_nodes)
+            .service(get_config)
+            .service(put_node_name)
             .route("/", get().to(index))
             .route("/download/{filename:.*}", get().to(download_file))
             .route("/health", get().to(health))
