@@ -8,6 +8,7 @@ pub async fn get_config() -> impl Responder {
 
 #[put("/config/{name}")]
 pub async fn put_node_name(path: web::Path<String>) -> impl Responder {
+    todo!("update node name by node holder sender");
     let name = path.into_inner();
     let mut cfg = config::get_config().await;
     cfg.set_node_name(name).await;

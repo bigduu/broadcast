@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::update_config;
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    id: i64,
     board_ip: String,
     board_port: u16,
     node_timeout: u16,
@@ -16,6 +17,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn id(&self) -> i64 {
+        self.id
+    }
+
     pub fn board_ip(&self) -> &str {
         self.board_ip.as_ref()
     }
@@ -59,5 +64,21 @@ impl Config {
     pub async fn set_node_list(&mut self, node_list: Vec<Node>) {
         self.node_list = node_list;
         update_config(self.clone()).await;
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            id: utils::snowflake::SNOWFLAKE
+                .lock()
+                .unwrap()
+                .real_time_generate(),
+            board_ip: "224.0.0.1".to_string(),
+            board_port: 8081,
+            node_timeout: 10,
+            node_name: utils::safe_get_ip(),
+            node_list: Vec::new(),
+        }
     }
 }

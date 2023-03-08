@@ -12,3 +12,4 @@ storage = { path = "../storage" }
 domain = { path = "../domain" }
 
 lazy_static = "1.4.0"
+utils = { path = "../utils" }
